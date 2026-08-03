@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { login, signup } from "./actions";
 import { Suspense } from "react";
+import { siteConfig } from "@/lib/config";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -38,9 +40,9 @@ function LoginForm() {
         <div className="orb orb-2" />
         <div className="orb orb-3" />
 
-        {/* Top: Logo */}
-        <div className="relative z-10 animate-in">
-          <div className="flex items-center gap-3">
+        {/* Top: Logo & Back Link */}
+        <div className="relative z-10 animate-in flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
             <div className="logo-icon w-10 h-10 rounded-xl flex items-center justify-center">
               <svg
                 width="22"
@@ -57,9 +59,27 @@ function LoginForm() {
               </svg>
             </div>
             <span className="text-white/90 font-semibold text-lg tracking-tight">
-              CTI Soluciones
+              {siteConfig.name}
             </span>
-          </div>
+          </Link>
+
+          <Link
+            href="/"
+            className="text-xs font-medium text-blue-200/80 hover:text-white border border-blue-400/20 bg-blue-500/10 px-3.5 py-1.5 rounded-lg backdrop-blur-sm transition-all flex items-center gap-1.5"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            Volver al Sitio Web
+          </Link>
         </div>
 
         {/* Center: Tagline */}
@@ -72,7 +92,7 @@ function LoginForm() {
             </span>
           </h1>
           <p className="mt-5 text-blue-200/60 text-lg leading-relaxed animate-in-delay-2">
-            Accede a la base de conocimiento de tu empresa con búsqueda profunda
+            Accede a la base de conocimiento de {siteConfig.name} con búsqueda profunda
             impulsada por IA. Todo tu contexto corporativo, al alcance de una
             conversación.
           </p>
@@ -95,8 +115,7 @@ function LoginForm() {
         {/* Bottom: Footer */}
         <div className="relative z-10 animate-in-delay-4">
           <p className="text-blue-300/30 text-sm">
-            © {new Date().getFullYear()} CTI Soluciones — Intranets
-            Empresariales B2B
+            © {new Date().getFullYear()} {siteConfig.name} — Intranets Empresariales B2B
           </p>
         </div>
       </div>
@@ -122,7 +141,7 @@ function LoginForm() {
               </svg>
             </div>
             <span className="text-white/90 font-semibold text-base tracking-tight">
-              CTI Soluciones
+              {siteConfig.name}
             </span>
           </div>
 
@@ -358,7 +377,7 @@ function LoginForm() {
 
           {/* Footer (mobile) */}
           <p className="mt-10 text-center text-slate-500/40 text-xs lg:hidden">
-            © {new Date().getFullYear()} CTI Soluciones
+            © {new Date().getFullYear()} {siteConfig.name}
           </p>
         </div>
       </div>

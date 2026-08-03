@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { siteConfig } from "@/lib/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Intranet | CTI Soluciones",
-  description:
-    "Portal corporativo inteligente con búsqueda profunda impulsada por IA — CTI Soluciones",
+  title: `${siteConfig.name} — ${siteConfig.tagline}`,
+  description: siteConfig.description,
 };
 
 export default function RootLayout({
