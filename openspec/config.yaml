@@ -1,0 +1,90 @@
+schema: spec-driven
+
+context: |
+  Project: ELEVATE — Intranet Corporativa B2B
+  Company: Elevate (nombre del cliente)
+  Scale: 200+ empleados, escalable
+  Language: UI en Español (MX), código/comments en Inglés
+  
+  Tech Stack:
+    - Next.js 16.2 (App Router, RSC, Server Actions)
+    - React 19.2
+    - TypeScript 5 (strict mode)
+    - Supabase SSR (Auth, Realtime WebSockets, Storage, RLS)
+    - Tailwind CSS v4 (tw-animate-css, class-variance-authority)
+    - Shadcn UI (base-nova style, Base UI primitives)
+    - Lucide React (icons)
+    - PostgreSQL via Supabase (RLS multi-tenant)
+  
+  Architecture:
+    - Route Groups: (auth) for login, (intranet) for protected routes
+    - Sidebar: macOS Dock-style vertical sidebar with icons + tooltips
+    - Design: Dark theme elegante, azul profundo + cyan, glassmorphism
+    - Auth: Supabase SSR with HttpOnly cookies, JWT refresh via middleware
+    - RBAC: super_admin, admin, hr_manager, manager, team_lead, employee
+    - Multi-tenant: organization_id on all tables, RLS policies, get_user_org_id()
+  
+  Modules:
+    1. Auth & User Management (login, signup, profiles, roles)
+    2. Dashboard (metrics, quick access, recent activity)
+    3. Chat (Supabase Realtime: channels, DMs, threads, reactions, mentions)
+    4. File Management (folders, uploads, permissions, Supabase Storage)
+    5. Employee Directory (search, filters, org chart)
+    6. Approval Workflows (multi-level chains, custom request types)
+    7. Attendance (check-in/out, biometric imports)
+    8. Payroll (receipts, CONTPAQi/NOI integration)
+    9. Announcements (corporate communications, priorities)
+    10. Bug Reports / Improvements (public form with file upload)
+    11. Notifications (realtime, action URLs)
+    12. Settings (profile, system config)
+  
+  Conventions:
+    - HTML5 semantic elements (header, nav, main, section, article, footer)
+    - WCAG 2.2 AA accessibility (4.5:1 contrast, keyboard nav, ARIA, skip links)
+    - Modular components in src/components/ (no monolithic pages)
+    - Server Components by default, "use client" only when needed
+    - SQL migrations numbered: 001_core.sql, 002_chat.sql, etc.
+    - Git branching: main, feature/*, fix/*
+  
+  External Integrations:
+    - CONTPAQi / NOI (payroll system, import/export)
+    - Biometric attendance devices (CSV/Excel import)
+  
+  Domain Knowledge:
+    - Mexican labor law compliance (LFPDPPP for data privacy)
+    - Enterprise B2B workflows with multi-step approvals
+    - Department hierarchy + cross-functional project teams
+
+rules:
+  proposal:
+    - Include affected modules and their dependencies
+    - Specify which RBAC roles are impacted
+    - Identify database schema changes (new tables, columns, RLS policies)
+    - Include rollback strategy
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Include accessibility requirements for UI changes
+    - Specify Supabase RLS policies for data access
+    - Include Spanish UI labels where applicable
+  design:
+    - Reference existing components and patterns in the codebase
+    - Include Supabase Realtime subscription strategy for real-time features
+    - Specify TypeScript interfaces for new data models
+    - Include SQL migration scripts
+  tasks:
+    - Group tasks by component (backend, frontend, database)
+    - Maximum 2 hours per task
+    - Include verification step for each task
+    - Specify which files are created vs modified
+
+operations:
+  apply:
+    guidance:
+      - Run npm run build after completing each module
+      - Verify TypeScript strict mode compliance
+      - Test keyboard navigation for new UI components
+  archive:
+    guidance:
+      - Summarize database schema changes
+      - List new API routes and server actions created
+      - Note any pending items for future phases
