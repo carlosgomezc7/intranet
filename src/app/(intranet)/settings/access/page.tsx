@@ -9,7 +9,7 @@ import { BASE_SYSTEM_ROLES, SYSTEM_PERMISSIONS } from "@/lib/auth/constants";
 import { ShieldCheck, Users, ArrowLeft, SlidersHorizontal, Search, UserCheck, Sparkles, Filter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
-import { isDemoMode, DEMO_USERS } from "@/lib/demo";
+import { getDefaultProfile } from "@/lib/defaults";
 
 export default function AccessControlPage() {
   const [activeTab, setActiveTab] = useState<"roles" | "users">("roles");
@@ -25,28 +25,6 @@ export default function AccessControlPage() {
 
   useEffect(() => {
     async function loadUsers() {
-      if (isDemoMode()) {
-        const demoProfiles: Profile[] = DEMO_USERS.map((u, i) => ({
-          id: `demo-user-${i + 1}`,
-          org_id: "demo-org-1",
-          username: u.username,
-          email: u.email,
-          full_name: u.username.replace(".", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          avatar_url: null,
-          role: u.role,
-          department_id: "demo-dept-1",
-          job_title: u.role === "admin" ? "Administrador" : u.role === "manager" ? "Gerente" : "Colaborador",
-          phone: "+52 55 0000 0000",
-          hire_date: "2026-01-01",
-          is_active: true,
-          settings_json: {},
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }));
-        setUsers(demoProfiles);
-        return;
-      }
-
       setLoadingUsers(true);
       try {
         const supabase = createClient();
@@ -55,11 +33,13 @@ export default function AccessControlPage() {
           .select("*, department:departments(*)")
           .order("full_name", { ascending: true });
 
-        if (data) {
+        if (data && data.length > 0) {
           setUsers(data as Profile[]);
+        } else {
+          setUsers([getDefaultProfile("admin")]);
         }
-      } catch (err) {
-        console.error("Error loading profiles:", err);
+      } catch {
+        setUsers([getDefaultProfile("admin")]);
       } finally {
         setLoadingUsers(false);
       }

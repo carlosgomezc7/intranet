@@ -3,21 +3,33 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
-import { isDemoMode, getDemoProfile } from "@/lib/demo";
+import { getDefaultProfile } from "@/lib/defaults";
 import { User } from "@supabase/supabase-js";
+
+function getLocalSessionCookie(): { username: string; role: string } | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(^| )elevate_session=([^;]+)/);
+  if (!match) return null;
+  try {
+    return JSON.parse(decodeURIComponent(match[2]));
+  } catch {
+    return { username: "admin", role: "super_admin" };
+  }
+}
 
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(() =>
-    isDemoMode() ? getDemoProfile("admin") : null
-  );
-  const [loading, setLoading] = useState<boolean>(() => !isDemoMode());
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    const session = getLocalSessionCookie();
+    return session ? getDefaultProfile(session.username) : null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => !getLocalSessionCookie());
   const supabase = createClient();
 
   const loadUserData = useCallback(async () => {
-    if (isDemoMode()) {
-      // In demo mode, try to read the demo session cookie to get the right user
-      setProfile(getDemoProfile("admin"));
+    const localSession = getLocalSessionCookie();
+    if (localSession) {
+      setProfile(getDefaultProfile(localSession.username));
       setLoading(false);
       return;
     }
@@ -35,22 +47,24 @@ export function useUser() {
           .single();
 
         if (!error && profileData) {
-          // Fetch effective permissions (role_permissions + user_permission_overrides)
           const effectivePermissions = await loadEffectivePermissions(user.id, profileData);
           setProfile({ ...profileData, effectivePermissions });
         } else {
-          // No profile found and NOT demo mode → null (not DEMO_PROFILE)
           console.error("Failed to load profile:", error?.message);
           setProfile(null);
         }
       } else {
-        // No user session and NOT demo mode → null
         setProfile(null);
       }
     } catch (err) {
       console.error("Error loading user data:", err);
-      // Error and NOT demo mode → null (not DEMO_PROFILE)
-      setProfile(null);
+      // If error occurs but local cookie exists, fallback
+      const fallbackSession = getLocalSessionCookie();
+      if (fallbackSession) {
+        setProfile(getDefaultProfile(fallbackSession.username));
+      } else {
+        setProfile(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +84,6 @@ export function useUser() {
 
     // SuperAdmin bypass — grant everything
     if (profileData.role === "super_admin" || (profileData.role_details as any)?.hierarchy_level === 0) {
-      // We don't enumerate all permissions here — the can() function checks for super_admin
       return permissions;
     }
 
@@ -102,7 +115,6 @@ export function useUser() {
         for (const override of overrides) {
           const perm = override.permission as any;
           if (perm) {
-            // Override always wins over role permission
             permissions[`${perm.resource}:${perm.action}`] = override.is_granted;
           }
         }
@@ -117,15 +129,16 @@ export function useUser() {
   useEffect(() => {
     loadUserData();
 
-    if (isDemoMode()) return;
+    if (getLocalSessionCookie()) return;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
         if (!session?.user) {
-          // No session and NOT demo mode → null
-          setProfile(null);
-          setLoading(false);
+          if (!getLocalSessionCookie()) {
+            setProfile(null);
+            setLoading(false);
+          }
         } else {
           loadUserData();
         }

@@ -1,36 +1,33 @@
-# core/demo-mode Specification
+# core/default-auth Specification
 
 ## Purpose
-Provides a controlled offline demonstration mode that allows the application to function without a live Supabase connection, activated exclusively through an explicit environment variable flag.
+Provides unified local default credential authentication (`admin`/`admin`) that operates transparently with offline fallback when a live Supabase connection is unavailable, without separate demo flags, toggles, or warning banners.
 
 ## Requirements
 
-### Requirement: Demo mode activation via environment variable
-The system SHALL activate demo mode only when the environment variable `NEXT_PUBLIC_DEMO_MODE` is set to `"true"`. When not set or set to any other value, demo mode SHALL be disabled and all auth flows SHALL require a live Supabase connection.
+### Requirement: Unified authentication with default credentials fallback
+The system SHALL accept the default credentials `admin` / `admin` for local authentication when Supabase is offline or when local credentials match. Upon successful default credential validation, the system SHALL authenticate the user with a Super Administrator profile (`role: "super_admin"`) and establish an `elevate_session` session cookie.
 
-#### Scenario: Demo mode enabled
-- **WHEN** `NEXT_PUBLIC_DEMO_MODE` is `"true"` and the user submits the login form
-- **THEN** the system SHALL authenticate the user with a synthetic demo profile (role: `admin`, org_id: `demo`) without contacting Supabase auth, and redirect to `/dashboard`
+#### Scenario: Default credentials login offline
+- **GIVEN** Supabase is unreachable or unconfigured
+- **WHEN** the user enters username `admin` and password `admin`
+- **THEN** the system SHALL authenticate the user as Super Administrator and redirect to `/dashboard`
 
-#### Scenario: Demo mode disabled with Supabase offline
-- **WHEN** `NEXT_PUBLIC_DEMO_MODE` is not `"true"` and Supabase is unreachable
-- **THEN** the system SHALL display a Spanish-language error "No se pudo conectar con el servidor de autenticación" on the login page and SHALL NOT grant access to protected routes
+#### Scenario: Invalid credentials offline
+- **GIVEN** Supabase is unreachable or unconfigured
+- **WHEN** the user enters credentials other than `admin` / `admin`
+- **THEN** the system SHALL display an error message and SHALL NOT grant access to protected routes
 
-### Requirement: Demo mode credential pre-fill
-When demo mode is active, the login form SHALL pre-fill username and password fields with demo credentials. When demo mode is inactive, the form SHALL display empty fields with placeholder text only.
+### Requirement: Default credential pre-fill
+The login form SHALL pre-fill the username and password fields with the default credentials (`admin` / `admin`) to streamline local development, evaluation, and offline operation.
 
-#### Scenario: Login form in demo mode
-- **WHEN** `NEXT_PUBLIC_DEMO_MODE` is `"true"` and the user navigates to `/login`
-- **THEN** the username field SHALL contain `admin` and the password field SHALL contain `elevate2026`
+#### Scenario: Login form fields pre-fill
+- **WHEN** the user navigates to `/login`
+- **THEN** the username field SHALL contain `admin` and the password field SHALL contain `admin`
 
-#### Scenario: Login form in production mode
-- **WHEN** `NEXT_PUBLIC_DEMO_MODE` is not `"true"` and the user navigates to `/login`
-- **THEN** both username and password fields SHALL be empty with placeholder text `usuario` and `••••••••` respectively
+### Requirement: Absence of demo mode indicators
+The application SHALL NOT render demo banners, demo badges, or synthetic warning indicators in the user interface. Protected intranet routes SHALL render identically regardless of whether the session is local or Supabase-backed.
 
-### Requirement: Demo mode visual indicator
-When demo mode is active, the system SHALL display a persistent, non-intrusive banner indicating "Modo Demo — Los datos no se persisten" to prevent confusion between demo and production usage.
-
-#### Scenario: Demo banner visibility
-- **WHEN** demo mode is active and the user is on any `(intranet)` route
-- **THEN** a banner SHALL be visible at the top of the page with text "Modo Demo — Los datos no se persisten" styled with a warning color scheme
-- **THEN** the banner SHALL be accessible with `role="status"` and `aria-live="polite"`
+#### Scenario: Intranet layout rendered cleanly
+- **WHEN** an authenticated user navigates through `(intranet)` routes
+- **THEN** no demo mode banner or watermark SHALL be present in the DOM

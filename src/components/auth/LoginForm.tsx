@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Lock, User, Building, ArrowRight, Eye, EyeOff, Mail } from "lucide-react";
 import { loginAction, signupAction } from "@/app/(auth)/login/actions";
-import { isDemoMode } from "@/lib/demo";
+import { DEFAULT_CREDENTIALS } from "@/lib/defaults";
 
 interface Props {
   isSignUp: boolean;
@@ -11,7 +11,6 @@ interface Props {
 
 export const LoginForm: React.FC<Props> = ({ isSignUp }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const demoActive = isDemoMode();
 
   return (
     <form action={isSignUp ? signupAction : loginAction} className="space-y-4">
@@ -28,7 +27,7 @@ export const LoginForm: React.FC<Props> = ({ isSignUp }) => {
                 name="fullName"
                 type="text"
                 required={isSignUp}
-                defaultValue={demoActive ? "Administrador" : undefined}
+                defaultValue="Administrador"
                 placeholder="Nombre y Apellidos"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-900/70 border border-sky-500/20 rounded-xl text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
               />
@@ -46,7 +45,7 @@ export const LoginForm: React.FC<Props> = ({ isSignUp }) => {
                 name="orgName"
                 type="text"
                 required={isSignUp}
-                defaultValue={demoActive ? "Elevate Solutions" : undefined}
+                defaultValue="Elevate Solutions"
                 placeholder="Ej. Mi Empresa S.A."
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-900/70 border border-sky-500/20 rounded-xl text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
               />
@@ -84,7 +83,7 @@ export const LoginForm: React.FC<Props> = ({ isSignUp }) => {
             required
             autoCapitalize="none"
             autoCorrect="off"
-            defaultValue={demoActive ? "admin" : undefined}
+            defaultValue={DEFAULT_CREDENTIALS.username}
             placeholder="usuario o admin"
             className="w-full pl-10 pr-4 py-2.5 bg-slate-900/70 border border-sky-500/20 rounded-xl text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
           />
@@ -102,7 +101,7 @@ export const LoginForm: React.FC<Props> = ({ isSignUp }) => {
             name="password"
             type={showPassword ? "text" : "password"}
             required
-            defaultValue={demoActive ? "elevate2026" : undefined}
+            defaultValue={DEFAULT_CREDENTIALS.password}
             placeholder="••••••••"
             className="w-full pl-10 pr-10 py-2.5 bg-slate-900/70 border border-sky-500/20 rounded-xl text-slate-200 text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
           />

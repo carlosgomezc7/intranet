@@ -1,8 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+
+async function isLocalSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.has("elevate_session");
+}
 
 export async function createPost(formData: FormData) {
   const content = (formData.get("content") as string || "").trim();
@@ -13,7 +18,7 @@ export async function createPost(formData: FormData) {
     return { success: false, error: "El contenido no puede estar vacío" };
   }
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/feed");
     return { success: true };
   }
@@ -52,7 +57,7 @@ export async function createPost(formData: FormData) {
 }
 
 export async function addReaction(postId: string, emoji: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/feed");
     return { success: true };
   }
@@ -78,7 +83,7 @@ export async function addReaction(postId: string, emoji: string) {
 }
 
 export async function votePoll(pollId: string, optionIndex: number) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/feed");
     return { success: true };
   }
@@ -104,7 +109,7 @@ export async function votePoll(pollId: string, optionIndex: number) {
 }
 
 export async function sendKudos(recipientId: string, badgeType: string, message: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/feed");
     return { success: true };
   }

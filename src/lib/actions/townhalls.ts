@@ -1,13 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+
+async function isLocalSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.has("elevate_session");
+}
 
 export async function scheduleTownHall(title: string, description: string, scheduledAt: string, streamUrl?: string) {
   if (!title || !scheduledAt) return { success: false, error: "Título y fecha programada son obligatorios" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/townhalls");
     return { success: true };
   }
@@ -47,7 +52,7 @@ export async function scheduleTownHall(title: string, description: string, sched
 export async function submitQuestion(townHallId: string, question: string) {
   if (!question) return { success: false, error: "La pregunta no puede estar vacía" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/townhalls");
     return { success: true };
   }
@@ -73,7 +78,7 @@ export async function submitQuestion(townHallId: string, question: string) {
 }
 
 export async function upvoteQuestion(questionId: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/townhalls");
     return { success: true };
   }
@@ -98,6 +103,6 @@ export async function upvoteQuestion(questionId: string) {
     revalidatePath("/townhalls");
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || "Error al votar pregunta" };
+    return { success: false, error: err?.message || "Error al votar la pregunta" };
   }
 }

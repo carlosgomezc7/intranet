@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode, DEMO_USERS } from "@/lib/demo";
+import { DEFAULT_CREDENTIALS, getDefaultProfile } from "@/lib/defaults";
 
 // Admin role UUID matching 012_rbac_pbac_system.sql seed
 const ADMIN_ROLE_ID = "b1000000-0000-4000-b000-000000000002";
@@ -22,41 +22,18 @@ export async function loginAction(formData: FormData) {
   }
 
   const cookieStore = await cookies();
+  const isDefault =
+    (identifier === DEFAULT_CREDENTIALS.username || identifier === `${DEFAULT_CREDENTIALS.username}@elevate.local`) &&
+    password === DEFAULT_CREDENTIALS.password;
 
-  // Demo mode: only check demo credentials when explicitly enabled
-  if (isDemoMode()) {
-    const demoPassword = process.env.DEMO_PASSWORD || "elevate2026";
-    const demoUser = DEMO_USERS.find(
-      (u) => u.username === identifier || u.email === identifier
-    );
-    if (demoUser && password === demoPassword) {
-      cookieStore.set("elevate_demo_session", JSON.stringify({ username: demoUser.username, role: demoUser.role }), {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-      });
-      revalidatePath("/", "layout");
-      redirect("/dashboard");
-    }
-    // If demo mode is on but credentials don't match any demo user, still show generic error
-    if (demoUser || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      redirect(`/login?error=${encodeURIComponent("Usuario o contraseña incorrectos")}`);
-    }
-  }
-
-  // Real Supabase Authentication via resolve_login_identifier
+  // Attempt Supabase Authentication via resolve_login_identifier
   try {
     const supabase = await createClient();
 
-    // Resolve identifier to email using secure DB function (case-insensitive, anti-enumeration)
     let authEmail: string | null = null;
-
     if (identifier.includes("@")) {
-      // If it looks like an email, use it directly
       authEmail = identifier;
     } else {
-      // Resolve username → email via RPC
       const { data: resolvedEmail } = await supabase.rpc(
         "resolve_login_identifier",
         { p_identifier: identifier }
@@ -64,13 +41,27 @@ export async function loginAction(formData: FormData) {
       authEmail = resolvedEmail || null;
     }
 
-    // Always attempt authentication — even with null email, to maintain constant-time behavior
     const { error } = await supabase.auth.signInWithPassword({
       email: authEmail || `${identifier}@invalid.local`,
       password,
     });
 
     if (error) {
+      // If Supabase credentials failed but user provided default admin credentials, fallback to local
+      if (isDefault) {
+        cookieStore.set(
+          "elevate_session",
+          JSON.stringify({ username: DEFAULT_CREDENTIALS.username, role: "super_admin" }),
+          {
+            path: "/",
+            httpOnly: true,
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 7,
+          }
+        );
+        revalidatePath("/", "layout");
+        redirect("/dashboard");
+      }
       redirect(`/login?error=${encodeURIComponent("Usuario o contraseña incorrectos")}`);
     }
   } catch (err: unknown) {
@@ -78,21 +69,24 @@ export async function loginAction(formData: FormData) {
     if (error?.digest?.startsWith("NEXT_REDIRECT")) {
       throw err;
     }
-    // Connection failure: redirect with error (no demo fallback in production)
-    if (isDemoMode()) {
-      const demoPassword = process.env.DEMO_PASSWORD || "elevate2026";
-      if (password === demoPassword) {
-        cookieStore.set("elevate_demo_session", JSON.stringify({ username: identifier, role: "admin" }), {
+
+    // Connection failure or offline: if default credentials provided, allow local login
+    if (isDefault) {
+      cookieStore.set(
+        "elevate_session",
+        JSON.stringify({ username: DEFAULT_CREDENTIALS.username, role: "super_admin" }),
+        {
           path: "/",
           httpOnly: true,
           sameSite: "lax",
           maxAge: 60 * 60 * 24 * 7,
-        });
-        revalidatePath("/", "layout");
-        redirect("/dashboard");
-      }
+        }
+      );
+      revalidatePath("/", "layout");
+      redirect("/dashboard");
     }
-    redirect(`/login?error=${encodeURIComponent("No se pudo conectar con el servidor")}`);
+
+    redirect(`/login?error=${encodeURIComponent("No se pudo conectar con el servidor de autenticación")}`);
   }
 
   revalidatePath("/", "layout");
@@ -121,17 +115,6 @@ export async function signupAction(formData: FormData) {
   }
 
   const cookieStore = await cookies();
-
-  if (isDemoMode()) {
-    cookieStore.set("elevate_demo_session", JSON.stringify({ username, role: "admin" }), {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-    revalidatePath("/", "layout");
-    redirect("/dashboard");
-  }
 
   try {
     const supabase = await createClient();
@@ -202,6 +185,7 @@ export async function signupAction(formData: FormData) {
 
 export async function signOutAction() {
   const cookieStore = await cookies();
+  cookieStore.delete("elevate_session");
   cookieStore.delete("elevate_demo_session");
 
   try {

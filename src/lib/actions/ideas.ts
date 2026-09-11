@@ -1,13 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+
+async function isLocalSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.has("elevate_session");
+}
 
 export async function submitIdea(title: string, description: string, category: string) {
   if (!title || !description) return { success: false, error: "Título y descripción son requeridos" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/ideas");
     return { success: true };
   }
@@ -44,7 +49,7 @@ export async function submitIdea(title: string, description: string, category: s
 }
 
 export async function voteIdea(ideaId: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/ideas");
     return { success: true };
   }
@@ -74,7 +79,7 @@ export async function voteIdea(ideaId: string) {
 }
 
 export async function updateIdeaStatus(ideaId: string, status: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/ideas");
     return { success: true };
   }

@@ -1,13 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+
+async function isLocalSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.has("elevate_session");
+}
 
 export async function createManual(title: string, description: string, category: string, icon: string) {
   if (!title) return { success: false, error: "El título es obligatorio" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/manuals");
     return { success: true };
   }
@@ -46,7 +51,7 @@ export async function createManual(title: string, description: string, category:
 export async function createChapter(manualId: string, title: string, sortOrder: number = 0) {
   if (!title) return { success: false, error: "El título del capítulo es obligatorio" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/manuals");
     return { success: true };
   }
@@ -71,7 +76,7 @@ export async function createChapter(manualId: string, title: string, sortOrder: 
 export async function publishArticle(chapterId: string, title: string, content: string) {
   if (!title || !content) return { success: false, error: "Título y contenido son obligatorios" };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/manuals");
     return { success: true };
   }

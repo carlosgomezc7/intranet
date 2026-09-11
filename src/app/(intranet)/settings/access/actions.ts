@@ -1,8 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+
+async function isLocalSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.has("elevate_session");
+}
 
 export async function createRoleAction(formData: FormData) {
   const name = (formData.get("name") as string || "").trim();
@@ -15,7 +20,7 @@ export async function createRoleAction(formData: FormData) {
     return { success: false, error: "El nombre y identificador del rol son obligatorios." };
   }
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/settings/access");
     return { success: true };
   }
@@ -76,7 +81,7 @@ export async function createRoleAction(formData: FormData) {
 }
 
 export async function deleteRoleAction(roleId: string) {
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/settings/access");
     return { success: true };
   }
@@ -114,7 +119,7 @@ export async function createGroupAction(formData: FormData) {
 
   if (!name) return { success: false, error: "El nombre del grupo es obligatorio." };
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/settings/access/groups");
     return { success: true };
   }
@@ -153,7 +158,7 @@ export async function updateMandatoryPasswordAction(formData: FormData) {
     return { success: false, error: "Las contraseñas no coinciden." };
   }
 
-  if (isDemoMode()) {
+  if (await isLocalSession()) {
     revalidatePath("/", "layout");
     return { success: true };
   }

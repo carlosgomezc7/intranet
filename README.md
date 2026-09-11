@@ -79,10 +79,11 @@ $$r = \frac{n(n - 1)}{2} = \frac{200 \times 199}{2} = 19,900 \text{ canales posi
   - **SLA de Activación Onboarding:** Meta $< 48\text{ horas}$.
 - **Widgets Operativos:** Resumen de solicitudes pendientes, checador de asistencia, actividad reciente y accesos directos.
 
-### 7. 🔒 Autenticación, Seguridad & Modo Demostración
+### 7. 🔒 Autenticación Unificada, Seguridad & Credenciales por Defecto
 - **Aislamiento Multi-Tenant:** Columna `org_id` en todas las tablas con políticas RLS basadas en `get_user_org_id()`.
 - **RBAC de 6 Niveles:** `super_admin` > `admin` > `hr_manager` > `manager` > `team_lead` > `employee`.
-- **Modo Demo Controlado (`NEXT_PUBLIC_DEMO_MODE`):** Capacidad de presentación y navegación offline con perfil simulado y banner de advertencia accesible sin comprometer la seguridad en producción.
+- **Credenciales por Defecto & Fallback Local:** Acceso unificado mediante Supabase o fallback local con usuario `admin` y contraseña `admin` (`super_admin`). Sin bifurcaciones de código ni banners demo.
+- **Feature Registry & Modularidad Granular:** Registro declarativo de características con nodos individuales para activar o desactivar módulos a nivel organización.
 
 ---
 
@@ -96,7 +97,7 @@ src/
 │   │   └── login/
 │   │       ├── actions.ts              # Server Actions (loginAction, signupAction, signOutAction)
 │   │       └── page.tsx                # Pantalla de acceso / registro con toggle
-│   ├── (intranet)/                     # Rutas protegidas (con DockSidebar + TopBar + DemoBanner)
+│   ├── (intranet)/                     # Rutas protegidas (con DockSidebar + TopBar)
 │   │   ├── layout.tsx                  # Layout con orbs ambientales y verificación de sesión
 │   │   ├── dashboard/page.tsx          # Dashboard modular con KPIs de gobernanza y Kudos
 │   │   ├── directory/page.tsx          # Directorio con switch de Fichas / Organigrama
@@ -127,13 +128,13 @@ src/
 │   │   ├── settings/                   # SettingsForm, SettingsProfileCard, SettingsSuccess...
 │   │   └── report/                     # ReportForm, ReportSuccess, ReportHeader...
 │   ├── landing/                        # Header, Hero, Services, About, Contact, Footer
-│   ├── layout/                         # DockSidebar, TopBar, UserMenu, DemoModeBanner
+│   ├── layout/                         # DockSidebar, TopBar, UserMenu
 │   └── shared/                         # Avatar, Badge, SearchBar, EmptyState
 ├── hooks/                              # useUser, usePermissions, useChat, useNotifications, useRealtime
 └── lib/
     ├── config.ts                       # Metadatos del portal y branding
     ├── constants.ts                    # Roles RBAC y rutas del macOS Dock
-    ├── demo.ts                         # Helper de modo demostración y perfil sintético
+    ├── defaults.ts                     # Credenciales por defecto (admin/admin) y perfil local
     ├── types.ts                        # Interfaces TypeScript del sistema
     └── supabase/
         ├── client.ts                   # Cliente Supabase para Browser Components
@@ -193,8 +194,8 @@ Configura tus credenciales en `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-aqui
 
-# Modo Demo (Opcional - habilita acceso offline y datos simulados para presentaciones)
-NEXT_PUBLIC_DEMO_MODE=false
+# Credenciales por defecto (offline / desarrollo)
+# Usuario: admin | Contraseña: admin (Rol: Super Administrador)
 ```
 
 ### 4. Ejecución de Migraciones de Base de Datos

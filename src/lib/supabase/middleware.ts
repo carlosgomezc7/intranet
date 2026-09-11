@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isDemoMode } from "@/lib/demo";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -21,73 +20,59 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const demoCookie = request.cookies.get("elevate_demo_session");
-  const hasDemoCookie = Boolean(demoCookie?.value);
-
-  let user = null;
-
-  if (hasDemoCookie && isDemoMode()) {
-    // Only honor demo cookie when demo mode is explicitly enabled
-    user = { id: "demo-user-1", email: "admin@elevate.com.mx" };
-  } else if (hasDemoCookie && !isDemoMode()) {
-    // Demo cookie exists but demo mode is off → clear it and don't authenticate
+  // Clean up legacy demo cookie if present
+  if (request.cookies.has("elevate_demo_session")) {
     supabaseResponse.cookies.delete("elevate_demo_session");
-    user = null;
+  }
+
+  const sessionCookie = request.cookies.get("elevate_session");
+  const hasLocalSession = Boolean(sessionCookie?.value);
+
+  let user: { id: string; email: string } | null = null;
+
+  if (hasLocalSession) {
+    // Local offline default session
+    try {
+      const parsed = JSON.parse(sessionCookie!.value);
+      user = {
+        id: `default-${parsed.username || "admin"}`,
+        email: `${parsed.username || "admin"}@elevate.local`,
+      };
+    } catch {
+      user = { id: "default-admin", email: "admin@elevate.local" };
+    }
   } else {
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+      const supabaseKey =
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        "";
 
-      if (!supabaseUrl || !supabaseKey) {
-        // Supabase not configured and demo mode off → block access
-        if (!isDemoMode()) {
-          const isProtectedPath = PROTECTED_PREFIXES.some((path) =>
-            request.nextUrl.pathname.startsWith(path)
-          );
-          if (isProtectedPath) {
-            const url = request.nextUrl.clone();
-            url.pathname = "/login";
-            url.searchParams.set("error", "connection_failed");
-            return NextResponse.redirect(url);
-          }
-        }
-        return supabaseResponse;
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createServerClient(supabaseUrl, supabaseKey, {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll();
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value }) =>
+                request.cookies.set(name, value)
+              );
+              supabaseResponse = NextResponse.next({
+                request,
+              });
+              cookiesToSet.forEach(({ name, value, options }) =>
+                supabaseResponse.cookies.set(name, value, options)
+              );
+            },
+          },
+        });
+
+        const { data } = await supabase.auth.getUser();
+        user = data?.user ? { id: data.user.id, email: data.user.email || "" } : null;
       }
-
-      const supabase = createServerClient(supabaseUrl, supabaseKey, {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value)
-            );
-            supabaseResponse = NextResponse.next({
-              request,
-            });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            );
-          },
-        },
-      });
-
-      const { data } = await supabase.auth.getUser();
-      user = data?.user ?? null;
     } catch {
-      // Supabase unreachable and demo mode OFF → redirect with connection error
-      if (!isDemoMode()) {
-        const isProtectedPath = PROTECTED_PREFIXES.some((path) =>
-          request.nextUrl.pathname.startsWith(path)
-        );
-        if (isProtectedPath) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/login";
-          url.searchParams.set("error", "connection_failed");
-          return NextResponse.redirect(url);
-        }
-      }
       user = null;
     }
   }

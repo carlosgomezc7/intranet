@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { isDemoMode } from "@/lib/demo";
+import { isDefaultProfile } from "@/lib/defaults";
 import { SYSTEM_PERMISSIONS } from "./constants";
 
 export * from "./constants";
@@ -10,8 +10,8 @@ export * from "./constants";
  *   SuperAdmin bypass → User Deny → User Grant → Role Permission → Default Deny
  */
 export async function getEffectivePermissions(userId: string): Promise<string[]> {
-  if (isDemoMode()) {
-    // Demo admin user has all permissions
+  if (isDefaultProfile(userId) || userId === "default-admin") {
+    // Default admin user has all permissions
     return SYSTEM_PERMISSIONS.map((p) => `${p.resource}:${p.action}`);
   }
 
